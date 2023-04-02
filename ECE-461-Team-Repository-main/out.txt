@@ -1,0 +1,76 @@
+https://api.github.com/repos/lodash/lodash
+Number of Events: 100
+Number of Starred: 100
+Number of Subscribers: 100
+Number of Commits: 100
+Number of Open_Issues: 100
+Number of Closed_Issues: 100
+License: Other
+Community Metric: 62
+Pull_Requests: 100
+
+https://api.github.com/repos/chalk/chalk
+Number of Events: 100
+Number of Starred: 100
+Number of Subscribers: 100
+Number of Commits: 100
+Number of Open_Issues: 3
+Number of Closed_Issues: 100
+License: MIT License
+Community Metric: 75
+Pull_Requests: 0
+
+https://api.github.com/repos/request/request
+Number of Events: 100
+Number of Starred: 100
+Number of Subscribers: 100
+Number of Commits: 100
+Number of Open_Issues: 98
+Number of Closed_Issues: 100
+License: Apache License 2.0
+Community Metric: 62
+Pull_Requests: 27
+
+https://api.github.com/repos/tj/commander.js
+Number of Events: 100
+Number of Starred: 100
+Number of Subscribers: 100
+Number of Commits: 100
+Number of Open_Issues: 6
+Number of Closed_Issues: 100
+License: MIT License
+Community Metric: 85
+Pull_Requests: 2
+
+https://api.github.com/repos/facebook/react
+Number of Events: 100
+Number of Starred: 100
+Number of Subscribers: 100
+Number of Commits: 100
+Number of Open_Issues: 100
+Number of Closed_Issues: 100
+License: MIT License
+Community Metric: 100
+Pull_Requests: 100
+
+https://api.github.com/repos/liady/webpack-node-externals
+Number of Events: 28
+Number of Starred: 100
+Number of Subscribers: 9
+Number of Commits: 100
+Number of Open_Issues: 54
+Number of Closed_Issues: 73
+License: MIT License
+Community Metric: 42
+Pull_Requests: 12
+
+https://api.github.com/repos/jrburke/r.js
+Number of Events: 8
+Number of Starred: 100
+Number of Subscribers: 96
+Number of Commits: 100
+Number of Open_Issues: 100
+Number of Closed_Issues: 100
+License: Other
+Community Metric: 62
+Pull_Requests: 11

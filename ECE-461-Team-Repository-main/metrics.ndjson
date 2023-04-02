@@ -1,0 +1,5 @@
+{"metric":"RAMP_UP_SCORE", "api":"clone", "filepath":"urlParser.py", "line":11}
+{"metric":"CORRECTNESS_SCORE", "api":"rest", "filepath":"API.py", "line":81}
+{"metric":"BUS_FACTOR_SCORE", "api":"grahphql", "filepath":"graphQlAPI.py", "line":44}
+{"metric":"RESPONSIVE_MAINTAINER_SCORE", "api":"rest", "filepath":"API.py", "line":96}
+{"metric":"LICENSE_SCORE", "api":"rest", "filepath":"API.py", "line":105}

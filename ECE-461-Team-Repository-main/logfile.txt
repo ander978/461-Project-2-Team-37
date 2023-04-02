@@ -1,0 +1,12 @@
+Error Log Now Running
+
+Cannot Clone. No Access to or already cloned https://github.com/cloudinary/cloudinary_npm
+
+Cannot Clone. No Access to or already cloned https://www.npmjs.com/package/express
+
+Cannot Clone. No Access to or already cloned https://github.com/nullivex/nodist
+
+Cannot Clone. No Access to or already cloned https://github.com/lodash/lodash
+
+Cannot Clone. No Access to or already cloned https://www.npmjs.com/package/browserify
+
