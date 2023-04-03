@@ -2,11 +2,15 @@ package main
 
 import (
 	"bufio"
+	"database/sql"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"sort"
 	"strings"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 func readFromFile(file string) string {
@@ -28,6 +32,53 @@ func readFromFile(file string) string {
 }
 
 func main() {
+	// Connect to the database
+	db, err := sql.Open("sqlite3", "./github_scores.db")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	// Create the scores table
+	sqlStmt := `
+	create table if not exists scores (
+		id integer not null primary key,
+		url text,
+		package_name text,
+		responsive_score float,
+		net_score float,
+		ramp_up_score float,
+		correctness_score float,
+		bus_factor_score float,
+		responsive_maintainer_score float,
+		license_score float
+	);
+	`
+	_, err = db.Exec(sqlStmt)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Insert the GitHub URL into the scores table
+	url := "https://github.com/my_username/my_repository"
+	packageName := "my_package_name"
+	tx, err := db.Begin()
+	if err != nil {
+		log.Fatal(err)
+	}
+	stmt, err := tx.Prepare("insert into scores(url, package_name) values(?, ?)")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
+	_, err = stmt.Exec(url, packageName)
+	if err != nil {
+		log.Fatal(err)
+	}
+	tx.Commit()
+
+	fmt.Println("GitHub URL stored in the database")
+
 	// Load in REST file
 	file := "out.txt"
 	data := readFromFile(file)
@@ -118,7 +169,35 @@ func main() {
 		sort.Slice(keys, func(i, j int) bool {
 			return keys[i].Value > keys[j].Value
 		})
-
+		// Insert the scores into the database
+		tx, err = db.Begin()
+		if err != nil {
+			log.Fatal(err)
+		}
+		stmt, err = tx.Prepare(`
+			insert into scores(
+				url, package_name, responsive_score, net_score,
+				ramp_up_score, correctness_score, bus_factor_score,
+				responsive_maintainer_score, license_score
+			) values(?, ?, ?, ?, ?, ?, ?, ?, ?)
+		`)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer stmt.Close()
+		_, err = stmt.Exec(
+			url, packageName, scores["RESPONSIVE_SCORE"], net_score,
+			scores["RAMP_UP_SCORE"], scores["CORRECTNESS_SCORE"], scores["BUS_FACTOR_SCORE"],
+			scores["RESPONSIVE_MAINTAINER_SCORE"], scores["LICENSE_SCORE"],
+		)
+		if err != nil {
+			log.Fatal(err)
+		}
+		err = tx.Commit()
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println("Scores added to the database.")
 		//keys = sort.Sort(sort.Reverse(sort.StringSlice(keys)))
 		linex := strings.Split(line1[0], "api.")
 		linex2 := strings.Split(linex[1], "/repos")
@@ -128,9 +207,10 @@ func main() {
 
 }
 
-//export rampUpScore
 // Use lines of code, as the more lines there are the harder it will be to learn
 // Use community metric, as reflects different methods of help access such as readme and license
+//
+//export rampUpScore
 func rampUpScore(communityMetric int, linesOfCode int) float64 {
 	metricScale := float64(communityMetric) / 100
 	linesScale := float64(linesOfCode) / 5000
