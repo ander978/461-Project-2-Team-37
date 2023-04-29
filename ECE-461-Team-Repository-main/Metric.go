@@ -72,7 +72,7 @@ func prCodeReviewScore(totalCommits int, totalPRs int, prCounts [6]int) float64 
     // +1 for the merge commit that GraphQL does not count.
     estGoodCommits = float64(totalPRs) * crprRatio * commitAvg
 
-    commitRatio = estGoodCommits / totalCommits
+    commitRatio = estGoodCommits / float64(totalCommits)
     commitRatioScore = commitRatio * commitRatioWeight
 
     return (crRecencyScore + commitRatioScore)
