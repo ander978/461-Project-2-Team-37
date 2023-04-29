@@ -282,12 +282,12 @@ func main() {
 
 }
 
-// New metrics - Version Pinning, Code Reviewed PRs
+// New metric - Code Reviewed PRs
 func prCodeReviewScore(totalCommits int, totalPRs int, prCounts [6]int) float64 {
     crRecencyWeight := 0.30
     commitRatioWeight := 0.70
 
-    // GraphQL got the 99 most recent PRS (100 broke for me for some reason)
+    // GraphQL got the 100 most recent PRs (sometimes this breaks in the Explorer for some reason)
     // The first fraction is how many of the recently added lines of code come from CRPRs.
     crRecency := prCounts[good_line_ind] / (prCounts[bad_line_ind] + prCounts[good_line_ind])
     crRecencyScore := crRecency * crRecencyWeight
@@ -295,7 +295,7 @@ func prCodeReviewScore(totalCommits int, totalPRs int, prCounts [6]int) float64 
     // The second fraction estimates how many of all the commits on the default branch come from CRPRs.
     crprRatio := prCounts[good_pr_ind] / (prCounts[bad_pr_ind] + prCounts[good_pr_ind])
     // Technically don't need to split commit count by good and bad, but could be useful?
-    commitAvg := ((prCounts[good_commit_ind] + prCounts[bad_commit_ind]) / 99) + 1
+    commitAvg := ((prCounts[good_commit_ind] + prCounts[bad_commit_ind]) / 100) + 1
     // +1 for the merge commit that GraphQL does not count.
     estGoodCommits := totalPRs * crprRatio * commitAvg
 
@@ -370,7 +370,7 @@ func responsiveMaintainerScore(commits int, closedIssues int) float64 {
 	return (commitsScore + closedIssuesScore) / 2.0
 }
 
-// New metrics - need to determine weighting
+// New metrics - need to determine weighting**
 func netScore(correctnessScore float64,
               busFactorScore float64,
               license float64,

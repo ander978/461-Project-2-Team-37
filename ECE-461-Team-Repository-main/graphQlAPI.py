@@ -30,7 +30,7 @@ def generateQuery(url):
           watchers {
             totalCount
           }
-          pullRequests(last: 99, states: CLOSED) {
+          pullRequests(last: 100, states: CLOSED) {
             totalCount
             edges {
               node {
