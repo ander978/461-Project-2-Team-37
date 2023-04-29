@@ -33,8 +33,25 @@ func readFromFile(file string) string {
 
 // New metric - Code Reviewed PRs
 func prCodeReviewScore(totalCommits int, totalPRs int, prCounts [6]int) float64 {
+    // Keep everything float for convenience
+    var crRecency float64
+    var crRecencyScore float64
+    var crprRatio float64
+    var commitAvg float64
+    var estGoodCommits float64
+    var commitRatio float64
+    var commitRatioScore float64
     crRecencyWeight := 0.30
     commitRatioWeight := 0.70
+    const (
+	    good_pr_ind = 0
+	    bad_pr_ind = 1
+	    good_line_ind = 2
+	    bad_line_ind = 3
+	    good_commit_ind = 4
+	    bad_commit_ind = 5
+	)
+
 
     // GraphQL got the 100 most recent PRs (sometimes this breaks in the Explorer for some reason)
     // The first fraction is how many of the recently added lines of code come from CRPRs.
@@ -407,19 +424,19 @@ func main() {
         scores["LICENSE_SCORE"] >= 0.5) {
 
             // Insert the scores into the database
-            tx, err = db.Begin()
-            if err != nil {
-                log.Fatal(err)
+            tx, beginErr := db.Begin()
+            if beginErr != nil {
+                log.Fatal(beginErr)
             }
-            stmt, err = tx.Prepare(`
+            stmt, prepareErr := tx.Prepare(`
                 insert into scores(
                     url, package_name, net_score,
                     ramp_up_score, correctness_score, bus_factor_score,
                     responsive_maintainer_score, license_score, pr_review_score
                 ) values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `)
-            if err != nil {
-                log.Fatal(err)
+            if prepareErr != nil {
+                log.Fatal(prepareErr)
             }
             defer stmt.Close()
             _, err = stmt.Exec(
