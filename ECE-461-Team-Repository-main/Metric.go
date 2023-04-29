@@ -41,8 +41,6 @@ func prCodeReviewScore(totalCommits int, totalPRs int, prCounts [6]int) float64 
     var estGoodCommits float64
     var commitRatio float64
     var commitRatioScore float64
-    crRecencyWeight := 0.30
-    commitRatioWeight := 0.70
     const (
 	    good_pr_ind = 0
 	    bad_pr_ind = 1
@@ -51,22 +49,31 @@ func prCodeReviewScore(totalCommits int, totalPRs int, prCounts [6]int) float64 
 	    good_commit_ind = 4
 	    bad_commit_ind = 5
 	)
+    crRecencyWeight := 0.30
+    commitRatioWeight := 0.70
 
+    // Type conversion for more accurate scores
+    goodPRs := float64(prCounts[good_pr_ind])
+    badPRs := float64(prCounts[bad_pr_ind])
+    goodLines := float64(prCounts[good_line_ind])
+    badLines := float64(prCounts[bad_line_ind])
+    goodCommits := float64(prCounts[good_commit_ind])
+    badCommits := float64(prCounts[bad_commit_ind])
 
     // GraphQL got the 100 most recent PRs (sometimes this breaks in the Explorer for some reason)
     // The first fraction is how many of the recently added lines of code come from CRPRs.
-    crRecency := prCounts[good_line_ind] / (prCounts[bad_line_ind] + prCounts[good_line_ind])
-    crRecencyScore := crRecency * crRecencyWeight
+    crRecency = goodLines / (badLines + goodLines)
+    crRecencyScore = crRecency * crRecencyWeight
 
     // The second fraction estimates how many of all the commits on the default branch come from CRPRs.
-    crprRatio := prCounts[good_pr_ind] / (prCounts[bad_pr_ind] + prCounts[good_pr_ind])
+    crprRatio = goodPRs / (badPRs + goodPRs)
     // Technically don't need to split commit count by good and bad, but could be useful?
-    commitAvg := ((prCounts[good_commit_ind] + prCounts[bad_commit_ind]) / 100) + 1
+    commitAvg = ((goodCommits + badCommits) / 100) + 1
     // +1 for the merge commit that GraphQL does not count.
-    estGoodCommits := totalPRs * crprRatio * commitAvg
+    estGoodCommits = float64(totalPRs) * crprRatio * commitAvg
 
-    commitRatio := estGoodCommits / totalCommits
-    commitRatioScore := commitRatio * commitRatioWeight
+    commitRatio = estGoodCommits / totalCommits
+    commitRatioScore = commitRatio * commitRatioWeight
 
     return (crRecencyScore + commitRatioScore)
 }
