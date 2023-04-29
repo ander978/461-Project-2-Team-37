@@ -31,6 +31,29 @@ func readFromFile(file string) string {
 	return data
 }
 
+// New metric - Code Reviewed PRs
+func prCodeReviewScore(totalCommits int, totalPRs int, prCounts [6]int) float64 {
+    crRecencyWeight := 0.30
+    commitRatioWeight := 0.70
+
+    // GraphQL got the 100 most recent PRs (sometimes this breaks in the Explorer for some reason)
+    // The first fraction is how many of the recently added lines of code come from CRPRs.
+    crRecency := prCounts[good_line_ind] / (prCounts[bad_line_ind] + prCounts[good_line_ind])
+    crRecencyScore := crRecency * crRecencyWeight
+
+    // The second fraction estimates how many of all the commits on the default branch come from CRPRs.
+    crprRatio := prCounts[good_pr_ind] / (prCounts[bad_pr_ind] + prCounts[good_pr_ind])
+    // Technically don't need to split commit count by good and bad, but could be useful?
+    commitAvg := ((prCounts[good_commit_ind] + prCounts[bad_commit_ind]) / 100) + 1
+    // +1 for the merge commit that GraphQL does not count.
+    estGoodCommits := totalPRs * crprRatio * commitAvg
+
+    commitRatio := estGoodCommits / totalCommits
+    commitRatioScore := commitRatio * commitRatioWeight
+
+    return (crRecencyScore + commitRatioScore)
+}
+
 func main() {
 	// Connect to the database
 	db, err := sql.Open("sqlite3", "./github_scores.db")
@@ -265,36 +288,12 @@ func main() {
 			log.Fatal(err)
 		}
 		fmt.Println("Scores added to the database.")
-		//keys = sort.Sort(sort.Reverse(sort.StringSlice(keys)))
+		// keys = sort.Sort(sort.Reverse(sort.StringSlice(keys)))
 		linex := strings.Split(line1[0], "api.")
 		linex2 := strings.Split(linex[1], "/repos")
 		line1[0] = linex[0] + linex2[0] + linex2[1]
 		fmt.Printf("{\"URL\":\"%s\", \"NET_SCORE\":%0.2f, \"%s\":%0.2f, \"%s\":%0.2f, \"%s\":%0.2f, \"%s\":%0.2f}\n", line1[0], net_score, keys[0].Key, scores[keys[0].Key], keys[1].Key, scores[keys[1].Key], keys[2].Key, scores[keys[2].Key], keys[3].Key, scores[keys[3].Key])
 	}
-
-}
-
-// New metric - Code Reviewed PRs
-func prCodeReviewScore(totalCommits int, totalPRs int, prCounts [6]int) float64 {
-    crRecencyWeight := 0.30
-    commitRatioWeight := 0.70
-
-    // GraphQL got the 100 most recent PRs (sometimes this breaks in the Explorer for some reason)
-    // The first fraction is how many of the recently added lines of code come from CRPRs.
-    crRecency := prCounts[good_line_ind] / (prCounts[bad_line_ind] + prCounts[good_line_ind])
-    crRecencyScore := crRecency * crRecencyWeight
-
-    // The second fraction estimates how many of all the commits on the default branch come from CRPRs.
-    crprRatio := prCounts[good_pr_ind] / (prCounts[bad_pr_ind] + prCounts[good_pr_ind])
-    // Technically don't need to split commit count by good and bad, but could be useful?
-    commitAvg := ((prCounts[good_commit_ind] + prCounts[bad_commit_ind]) / 100) + 1
-    // +1 for the merge commit that GraphQL does not count.
-    estGoodCommits := totalPRs * crprRatio * commitAvg
-
-    commitRatio := estGoodCommits / totalCommits
-    commitRatioScore := commitRatio * commitRatioWeight
-
-    return (crRecencyScore + commitRatioScore)
 }
 
 // Use lines of code, as the more lines there are the harder it will be to learn
