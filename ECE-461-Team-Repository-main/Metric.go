@@ -368,7 +368,7 @@ func netScore(correctnessScore float64,
               license float64,
               rampUpScore float64,
               MaintainerResponsivenss float64,
-              prCodeReviewScore float64
+              prCodeReviewScore float64,
               ) float64 {
 	final_score := (2*correctnessScore + 1.5*busFactorScore + 2*license + 2*rampUpScore + 3*MaintainerResponsivenss) / 10.5
 	return final_score
