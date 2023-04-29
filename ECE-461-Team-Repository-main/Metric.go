@@ -195,15 +195,7 @@ func main() {
 					Is_Code_Reviewed = true
 					PR_Review_Counts[good_pr_ind] += 1
 				}
-			} else if strings.Contains(ind, "additions") {
-				fields := strings.Fields(ind)
-				fmt.Sscanf(fields[1][:(len(fields[1]))], "%d", &Changed_Lines)
-				if Is_Code_Reviewed {
-					PR_Review_Counts[good_line_ind] += Changed_Lines
-				} else {
-					PR_Review_Counts[bad_line_ind] += Changed_Lines
-				}
-			} else if strings.Contains(ind, "deletions") {
+			} else if strings.Contains(ind, "additions") || strings.Contains(ind, "deletions") {
 				fields := strings.Fields(ind)
 				fmt.Sscanf(fields[1][:(len(fields[1]))], "%d", &Changed_Lines)
 				if Is_Code_Reviewed {
@@ -263,7 +255,7 @@ func main() {
 		_, err = stmt.Exec(
 			url, packageName, scores["RESPONSIVE_SCORE"], net_score,
 			scores["RAMP_UP_SCORE"], scores["CORRECTNESS_SCORE"], scores["BUS_FACTOR_SCORE"],
-			scores["RESPONSIVE_MAINTAINER_SCORE"], scores["LICENSE_SCORE"], scores["PR_REVIEW_SCORE"]
+			scores["RESPONSIVE_MAINTAINER_SCORE"], scores["LICENSE_SCORE"], scores["PR_REVIEW_SCORE"],
 		)
 		if err != nil {
 			log.Fatal(err)
