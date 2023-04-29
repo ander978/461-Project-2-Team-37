@@ -290,6 +290,7 @@ func main() {
 			} else if strings.Contains(ind, "License") {
 				fields := strings.Fields(ind)
 				fmt.Sscanf(fields[1], "%s", &License)
+			}
 		}
 		// Reset counts for every query
 		PR_Review_Counts = [6]int{0, 0, 0, 0, 0, 0}

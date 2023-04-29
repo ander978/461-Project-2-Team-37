@@ -21,8 +21,8 @@ def generateQuery(url):
         + owner
         + """) {
         repository (name: """
-        + name +
-        """) {
+        + name
+        + """) {
           forks {
             totalCount
           }
@@ -69,7 +69,7 @@ def generateQuery(url):
 def run_graphQlQuery(graphQlQuery, token, logPath):
     headers = {"Authorization": "Bearer " + token}
     request = requests.post(
-        'https://api.github.com/graphql', json={"query": graphQlQuery}, headers=headers
+        "https://api.github.com/graphql", json={"query": graphQlQuery}, headers=headers
     )
     if request.status_code == 200:
         return request.json()
@@ -79,7 +79,7 @@ def run_graphQlQuery(graphQlQuery, token, logPath):
                 "Query failed to run by returning code of {}. {}".format(
                     request.status_code, graphQlQuery
                 ),
-                file=f
+                file=f,
             )
         raise Exception(
             "Query failed to run by returning code of {}. {}".format(
