@@ -51,7 +51,8 @@ func main() {
 		correctness_score float,
 		bus_factor_score float,
 		responsive_maintainer_score float,
-		license_score float
+		license_score float,
+		pr_review_score float,
 	);
 	`
 	_, err = db.Exec(sqlStmt)
@@ -103,6 +104,23 @@ func main() {
 	var Number_of_forks int //
 	var Number_of_Total_Issues int
 	var License string
+	// Variable names for pr_review_score
+	var Number_of_Total_Commits int
+	var Review_Result string
+	var Changed_Lines int
+	var PR_Commit_Count int
+	var Is_Code_Reviewed bool
+	// Storage of multiple counts for pr_review_score
+	var PR_Review_Counts = [6]int{0, 0, 0, 0, 0, 0}
+	const (
+	    good_pr_ind = 0
+	    bad_pr_ind = 1
+	    good_line_ind = 2
+	    bad_line_ind = 3
+	    good_commit_ind = 4
+	    bad_commit_ind = 5
+	)
+
 
 	scores := make(map[string]float64)
 	for i, line := range lines {
@@ -133,8 +151,10 @@ func main() {
 			} else if strings.Contains(ind, "License") {
 				fields := strings.Fields(ind)
 				fmt.Sscanf(fields[1], "%s", &License)
-			}
 		}
+		// Reset counts for every query
+		PR_Review_Counts = [6]int{0, 0, 0, 0, 0, 0}
+
 		linesQL1 := strings.Split(lines_QL[i], ",")
 		for _, ind := range linesQL1 {
 			if strings.Contains(ind, "forks") {
@@ -152,6 +172,53 @@ func main() {
 			} else if strings.Contains(ind, "pullRequests") {
 				fields := strings.Fields(ind)
 				fmt.Sscanf(fields[2][:(len(fields[2]))], "%d", &Pull_Requests)
+			} else if strings.Contains(ind, "defaultBranchRef") {
+				fields := strings.Fields(ind)
+				fmt.Sscanf(fields[4][:(len(fields[4]))], "%d", &Number_of_Total_Commits)
+			} else if strings.Contains(ind, "edges") {
+				fields := strings.Fields(ind)
+				fmt.Sscanf(fields[3][1:(len(fields[3]))-1], "%s", &Review_Result)
+				if Review_Result == "null" {
+					Is_Code_Reviewed = false
+					PR_Review_Counts[bad_pr_ind] += 1
+				} else {
+					Is_Code_Reviewed = true
+					PR_Review_Counts[good_pr_ind] += 1
+				}
+			} else if strings.Contains(ind, "node") {
+				fields := strings.Fields(ind)
+				fmt.Sscanf(fields[2][1:(len(fields[2]))-1], "%s", &Review_Result)
+				if Review_Result == "null" {
+					Is_Code_Reviewed = false
+					PR_Review_Counts[bad_pr_ind] += 1
+				} else {
+					Is_Code_Reviewed = true
+					PR_Review_Counts[good_pr_ind] += 1
+				}
+			} else if strings.Contains(ind, "additions") {
+				fields := strings.Fields(ind)
+				fmt.Sscanf(fields[1][:(len(fields[1]))], "%d", &Changed_Lines)
+				if Is_Code_Reviewed {
+					PR_Review_Counts[good_line_ind] += Changed_Lines
+				} else {
+					PR_Review_Counts[bad_line_ind] += Changed_Lines
+				}
+			} else if strings.Contains(ind, "deletions") {
+				fields := strings.Fields(ind)
+				fmt.Sscanf(fields[1][:(len(fields[1]))], "%d", &Changed_Lines)
+				if Is_Code_Reviewed {
+					PR_Review_Counts[good_line_ind] += Changed_Lines
+				} else {
+					PR_Review_Counts[bad_line_ind] += Changed_Lines
+				}
+			} else if strings.Contains(ind, "commits") {
+				fields := strings.Fields(ind)
+				fmt.Sscanf(fields[2][:(len(fields[2])-3)], "%d", &PR_Commit_Count)
+				if Is_Code_Reviewed {
+					PR_Review_Counts[good_commit_ind] += PR_Commit_Count
+				} else {
+					PR_Review_Counts[bad_commit_ind] += PR_Commit_Count
+				}
 			}
 		}
 
@@ -160,7 +227,14 @@ func main() {
 		scores["BUS_FACTOR_SCORE"] = busFactorScore(Number_of_forks, Lines_of_Code, Pull_Requests)
 		scores["RESPONSIVE_MAINTAINER_SCORE"] = responsiveMaintainerScore(Number_of_Commits, Number_of_Closed_Issues)
 		scores["LICENSE_SCORE"] = license(License)
-		net_score := netScore(scores["CORRECTNESS_SCORE"], scores["BUS_FACTOR_SCORE"], scores["LICENSE_SCORE"], scores["RAMP_UP_SCORE"], scores["RESPONSIVE_MAINTAINER_SCORE"])
+		// New metrics - scores
+		scores["PR_REVIEW_SCORE"] = prCodeReviewScore(Number_of_Total_Commits, Pull_Requests, PR_Review_Counts)
+		net_score := netScore(scores["CORRECTNESS_SCORE"],
+		                      scores["BUS_FACTOR_SCORE"],
+		                      scores["LICENSE_SCORE"],
+		                      scores["RAMP_UP_SCORE"],
+		                      scores["RESPONSIVE_MAINTAINER_SCORE"],
+		                      scores["PR_REVIEW_SCORE"])
 		keys := make([]pair, 0, len(scores))
 		for key, value := range scores {
 			keys = append(keys, pair{key, value})
@@ -174,12 +248,13 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+		// New metrics - need to change the parts below, need to rearrange this main function
 		stmt, err = tx.Prepare(`
 			insert into scores(
 				url, package_name, responsive_score, net_score,
 				ramp_up_score, correctness_score, bus_factor_score,
-				responsive_maintainer_score, license_score
-			) values(?, ?, ?, ?, ?, ?, ?, ?, ?)
+				responsive_maintainer_score, license_score, pr_review_score
+			) values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		`)
 		if err != nil {
 			log.Fatal(err)
@@ -188,7 +263,7 @@ func main() {
 		_, err = stmt.Exec(
 			url, packageName, scores["RESPONSIVE_SCORE"], net_score,
 			scores["RAMP_UP_SCORE"], scores["CORRECTNESS_SCORE"], scores["BUS_FACTOR_SCORE"],
-			scores["RESPONSIVE_MAINTAINER_SCORE"], scores["LICENSE_SCORE"],
+			scores["RESPONSIVE_MAINTAINER_SCORE"], scores["LICENSE_SCORE"], scores["PR_REVIEW_SCORE"]
 		)
 		if err != nil {
 			log.Fatal(err)
@@ -205,6 +280,29 @@ func main() {
 		fmt.Printf("{\"URL\":\"%s\", \"NET_SCORE\":%0.2f, \"%s\":%0.2f, \"%s\":%0.2f, \"%s\":%0.2f, \"%s\":%0.2f}\n", line1[0], net_score, keys[0].Key, scores[keys[0].Key], keys[1].Key, scores[keys[1].Key], keys[2].Key, scores[keys[2].Key], keys[3].Key, scores[keys[3].Key])
 	}
 
+}
+
+// New metrics - Version Pinning, Code Reviewed PRs
+func prCodeReviewScore(totalCommits int, totalPRs int, prCounts [6]int) float64 {
+    crRecencyWeight := 0.30
+    commitRatioWeight := 0.70
+
+    // GraphQL got the 99 most recent PRS (100 broke for me for some reason)
+    // The first fraction is how many of the recently added lines of code come from CRPRs.
+    crRecency := prCounts[good_line_ind] / (prCounts[bad_line_ind] + prCounts[good_line_ind])
+    crRecencyScore := crRecency * crRecencyWeight
+
+    // The second fraction estimates how many of all the commits on the default branch come from CRPRs.
+    crprRatio := prCounts[good_pr_ind] / (prCounts[bad_pr_ind] + prCounts[good_pr_ind])
+    // Technically don't need to split commit count by good and bad, but could be useful?
+    commitAvg := ((prCounts[good_commit_ind] + prCounts[bad_commit_ind]) / 99) + 1
+    // +1 for the merge commit that GraphQL does not count.
+    estGoodCommits := totalPRs * crprRatio * commitAvg
+
+    commitRatio := estGoodCommits / totalCommits
+    commitRatioScore := commitRatio * commitRatioWeight
+
+    return (crRecencyScore + commitRatioScore)
 }
 
 // Use lines of code, as the more lines there are the harder it will be to learn
@@ -272,7 +370,14 @@ func responsiveMaintainerScore(commits int, closedIssues int) float64 {
 	return (commitsScore + closedIssuesScore) / 2.0
 }
 
-func netScore(correctnessScore float64, busFactorScore float64, license float64, rampUpScore float64, MaintainerResponsivenss float64) float64 {
+// New metrics - need to determine weighting
+func netScore(correctnessScore float64,
+              busFactorScore float64,
+              license float64,
+              rampUpScore float64,
+              MaintainerResponsivenss float64,
+              prCodeReviewScore float64
+              ) float64 {
 	final_score := (2*correctnessScore + 1.5*busFactorScore + 2*license + 2*rampUpScore + 3*MaintainerResponsivenss) / 10.5
 	return final_score
 }

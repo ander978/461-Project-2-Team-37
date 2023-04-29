@@ -30,8 +30,27 @@ def generateQuery(url):
           watchers {
             totalCount
           }
-          pullRequests {
+          pullRequests(last: 99, states: CLOSED) {
             totalCount
+            edges {
+              node {
+                reviewDecision
+                additions
+                deletions
+                commits {
+                  totalCount
+                }
+              }
+            }
+          }
+          defaultBranchRef {
+            target {
+              ... on Commit {
+                history {
+                  totalCount
+                }
+              }
+            }
           }
         }
       }
