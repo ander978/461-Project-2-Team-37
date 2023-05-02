@@ -12,16 +12,6 @@ def format_url(url):
     url = url[0] + '.com/repos/' + url[1]
     return url
 
-def pullJasonFile(url):
-    branch = "master"
-    packageurl = f"{url}/raw/{branch}/package.json"
-    # Retrieve the content of the package.json file
-    response = requests.get(packageurl)
-    if response.status_code != 200:
-        raise Exception(f"Failed to retrieve package.json file for {repo_url}.")
-    content = response.text
-    print(content)
-    return content
 
 ## If username and token are provided then will authorize, can be adjusted as neccesary
 def authorize(token):

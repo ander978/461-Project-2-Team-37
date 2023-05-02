@@ -7,10 +7,8 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"regexp"
 	"sort"
 	"strings"
-	"encoding/json"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -32,57 +30,6 @@ func readFromFile(file string) string {
 
 	return data
 }
-
-// New Metric Dependencies 
-func isPinnedToVersion(version string, targetVersion string) bool {
-	// Check if the version is pinned to at least the target version
-	match, _ := regexp.MatchString(`^\d+\.\d+\..+$`, version)
-	if !match {
-		return false
-	}
-	majorMinor := strings.Join(strings.Split(version, ".")[:2], ".")
-	return majorMinor == targetVersion
-}
-
-func calculateDependenciesMetric(content string, targetVersion string) float64 {
-	// Parse the content of the package.json file
-	var data map[string]interface{}
-	err := json.Unmarshal([]byte(content), &data)
-	if err != nil {
-		fmt.Println("Failed to parse JSON:", err)
-		return 0.0
-	}
-
-	// Extract the dependencies from the parsed data
-	dependencies, ok := data["dependencies"].(map[string]interface{})
-	if !ok {
-		dependencies = make(map[string]interface{})
-	}
-	pinnedDeps := 0
-	totalDeps := len(dependencies)
-	for _, version := range dependencies {
-		if isPinnedToVersion(fmt.Sprintf("%v", version), targetVersion) {
-			pinnedDeps++
-		}
-	}
-
-	// Calculate the fraction of direct dependencies that are pinned to at least the target version
-	if totalDeps == 0 {
-		fmt.Println("No direct dependencies")
-		return 1.0
-	} else if pinnedDeps == 0 {
-		fmt.Println("No direct dependencies pinned to at least the target version")
-		return 1.0
-	} else {
-		fraction := float64(1) / float64(pinnedDeps)
-		fmt.Println("Fraction of direct dependencies:", fraction)
-		return fraction
-	}
-}
-
-
-
-
 
 // New metric - Code Reviewed PRs
 func prCodeReviewScore(totalCommits int, totalPRs int, prCounts [6]int) float64 {
@@ -203,15 +150,13 @@ func netScore(rampUp float64,
               responsiveMaintainer float64,
               license float64,
               prCodeReview float64,
-	      dependencies float64,
               ) float64 {
 	final_score := (2 * rampUp +
 	    2   * correctness +
 	    1.5 * busFactor +
 	    3   * responsiveMaintainer +
 	    2   * license +
-	    2   * prCodeReview +
-	    1.5 * dependencies ) / 12.5
+	    2   * prCodeReview) / 12.5
 	return final_score
 }
 
@@ -439,7 +384,6 @@ func main() {
 		scores["BUS_FACTOR_SCORE"] = busFactorScore(Number_of_Forks, Lines_of_Code, Pull_Requests)
 		scores["RESPONSIVE_MAINTAINER_SCORE"] = responsiveMaintainerScore(Number_of_Commits, Number_of_Closed_Issues)
 		scores["LICENSE_SCORE"] = licenseScore(License)
-		scorec["DEPENDCIES"] = calculateDependenciesMetric(pullJasonFile(url),"4.17"))
 		// New metrics - scores
 		scores["PR_REVIEW_SCORE"] = prCodeReviewScore(Number_of_Total_Commits, Pull_Requests, PR_Review_Counts)
 		net_score := netScore(scores["RAMP_UP_SCORE"],
@@ -447,7 +391,7 @@ func main() {
 		                      scores["BUS_FACTOR_SCORE"],
 		                      scores["RESPONSIVE_MAINTAINER_SCORE"],
 		                      scores["LICENSE_SCORE"],
-				      scores["PR_REVIEW_SCORE"],scores["DEPENDCIES"])
+		                      scores["PR_REVIEW_SCORE"])
 		keys := make([]pair, 0, len(scores))
 		for key, value := range scores {
 			keys = append(keys, pair{key, value})
@@ -522,20 +466,3 @@ func main() {
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
