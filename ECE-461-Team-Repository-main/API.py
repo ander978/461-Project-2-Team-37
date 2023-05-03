@@ -12,17 +12,21 @@ def format_url(url):
     url = url[0] + '.com/repos/' + url[1]
     return url
 
-def pullJasonFile(url):
+## Get Dependencies
+def get_dependencies(url, token=False):
     branch = "master"
     packageurl = f"{url}/raw/{branch}/package.json"
+    params = {
+        'per_page': 100
+    }
     # Retrieve the content of the package.json file
-    response = requests.get(packageurl)
-    if response.status_code != 200:
-        raise Exception(f"Failed to retrieve package.json file for {repo_url}.")
-    content = response.text
-    print(content)
-    return content
+    response = requests.get(packageurl,params=params, headers=authorize(token))
+    content = response.json()
 
+    # Extract dependencies from the content
+    dependencies = content.get("dependencies", {})
+    dependencies_string = ", ".join([f'{key}: {value}' for key, value in dependencies.items()])
+    return dependencies_string.replace('"', '').replace('\\', '')
 ## If username and token are provided then will authorize, can be adjusted as neccesary
 def authorize(token):
     if (token != None):
@@ -165,6 +169,8 @@ def write(input, token, logFilePath):
         out.write('License: ' + license(url, token) + '\n')  # License
         out.write('Community Metric: ' + str(Community_Metrics(url, token)) + '\n')  # Community Metric
         out.write('Pull_Requests: ' + str(pull_requests(url, token)) + '\n')  # Pull Requests
+        dependencies = get_dependencies(url, token)
+        out.write('Dependencies: ' + str(json.dumps(dependencies, indent=2)) + '\n')
         out.write('\n')
     out.close()
 
