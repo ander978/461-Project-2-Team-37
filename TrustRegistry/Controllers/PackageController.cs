@@ -19,7 +19,13 @@ namespace TrustRegistry.Controllers
         {
             _context = context;
         }
+        [HttpGet]
+        public JsonResult GetRegistries()
+        {
+        var registries = _context.Registries.ToList();
 
+        return new JsonResult(registries);
+        }
         //Create and Edit 
         [HttpPost]
         public JsonResult CreateEdit(PackageRegistry registry)
