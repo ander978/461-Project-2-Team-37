@@ -33,54 +33,45 @@ func readFromFile(file string) string {
 	return data
 }
 
-// New Metric Dependencies 
-func isPinnedToVersion(version string, targetVersion string) bool {
-	// Check if the version is pinned to at least the target version
-	match, _ := regexp.MatchString(`^\d+\.\d+\..+$`, version)
-	if !match {
-		return false
+func getDependencyInfo(dependenciesString string) float64 {
+	regex := regexp.MustCompile(`([\w-]+):\s*([^,]+)`)
+	dependencies := regex.FindAllStringSubmatch(dependenciesString, -1)
+	numDependencies := len(dependencies)
+	if numDependencies == 0 {
+		return 1.0
 	}
-	majorMinor := strings.Join(strings.Split(version, ".")[:2], ".")
-	return majorMinor == targetVersion
-}
-
-func calculateDependenciesMetric(content string, targetVersion string) float64 {
-	// Parse the content of the package.json file
-	var data map[string]interface{}
-	err := json.Unmarshal([]byte(content), &data)
-	if err != nil {
-		fmt.Println("Failed to parse JSON:", err)
-		return 0.0
-	}
-
-	// Extract the dependencies from the parsed data
-	dependencies, ok := data["dependencies"].(map[string]interface{})
-	if !ok {
-		dependencies = make(map[string]interface{})
-	}
-	pinnedDeps := 0
-	totalDeps := len(dependencies)
-	for _, version := range dependencies {
-		if isPinnedToVersion(fmt.Sprintf("%v", version), targetVersion) {
-			pinnedDeps++
+	numPinnedDependencies := 0
+	for _, dependency := range dependencies {
+		_, version := dependency[1], dependency[2]
+		version = strings.TrimSpace(version)
+		match, _ := regexp.MatchString(`^\^0\.\d+(\.\d+)*$`, version)
+		if match {
+			numPinnedDependencies++
+			continue
+		}
+		match, _ = regexp.MatchString(`^~\d+\.\d+(\.\d+)*$`, version)
+		if match {
+			numPinnedDependencies++
+			continue
+		}
+		match, _ = regexp.MatchString(`^\d+\.\d+(\.\d+)*(\.[xX*])?$`, version)
+		if match {
+			numPinnedDependencies++
+			continue
+		}
+		match, _ = regexp.MatchString(`^\d+\.\d+(\.\d+)*$`, version)
+		if match {
+			numPinnedDependencies++
+			continue
+		}
+		match, _ = regexp.MatchString(`^\d+\.\d+(\.\d+)*\s-\s\d+\.\d+(\.\d+)*$`, version)
+		if match {
+			numPinnedDependencies++
 		}
 	}
 
-	// Calculate the fraction of direct dependencies that are pinned to at least the target version
-	if totalDeps == 0 {
-		fmt.Println("No direct dependencies")
-		return 1.0
-	} else if pinnedDeps == 0 {
-		fmt.Println("No direct dependencies pinned to at least the target version")
-		return 1.0
-	} else {
-		fraction := float64(1) / float64(pinnedDeps)
-		fmt.Println("Fraction of direct dependencies:", fraction)
-		return fraction
-	}
+	return float64(numPinnedDependencies) / float64(numDependencies)
 }
-
-
 
 
 
@@ -311,6 +302,7 @@ func main() {
 	var Number_of_Forks int //
 	var Number_of_Total_Issues int
 	var License string
+	var Dependencies string
 
 	// Variable names for pr_review_score
 	var Number_of_Total_Commits int
@@ -369,6 +361,9 @@ func main() {
 			} else if strings.Contains(ind, "License") {
 				fields := strings.Fields(ind)
 				fmt.Sscanf(fields[1], "%s", &License)
+			} else if strings.Contains(ind, "Dependencies") {
+				fields := strings.Fields(ind)
+				fmt.Sscanf(fields[1], "%s",&Dependencies) 
 			}
 		}
 		// Reset counts for every query
@@ -439,8 +434,8 @@ func main() {
 		scores["BUS_FACTOR_SCORE"] = busFactorScore(Number_of_Forks, Lines_of_Code, Pull_Requests)
 		scores["RESPONSIVE_MAINTAINER_SCORE"] = responsiveMaintainerScore(Number_of_Commits, Number_of_Closed_Issues)
 		scores["LICENSE_SCORE"] = licenseScore(License)
-		scorec["DEPENDCIES"] = calculateDependenciesMetric(pullJasonFile(url),"4.17"))
 		// New metrics - scores
+		scores["DEPENDCIES"] = getDependencyInfo(Dependencies)
 		scores["PR_REVIEW_SCORE"] = prCodeReviewScore(Number_of_Total_Commits, Pull_Requests, PR_Review_Counts)
 		net_score := netScore(scores["RAMP_UP_SCORE"],
 		                      scores["CORRECTNESS_SCORE"],
